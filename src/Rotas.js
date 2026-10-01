@@ -1,8 +1,12 @@
 import express from "express";
 import { conteudo } from "./database/Conteudo.js"
 import Joi from "joi"
+import { usuarios } from "./database/Usuario.js"
+import crypto from "crypto-js"
+
 
 const rotas = express.Router()
+
 
 const esquema = Joi.object({
   capa: Joi.string().uri().required(),
@@ -14,6 +18,8 @@ const esquema = Joi.object({
   duracao: Joi.number().required(),
   faixa: Joi.number().required()
 })
+
+
 
 
 rotas.get("/conteudos", function(requisicao, resposta) {
@@ -35,9 +41,29 @@ rotas.get("/conteudos", function(requisicao, resposta) {
 })
 
 
+
+
+// consultar o conteúdo único do banco de dados
 rotas.get("/conteudo/:codigo", function(requisicao, resposta) {
-  const { codigo } = requisicao.params
+  // consultar o conteúdo único do banco de dados
+  const {codigo} = requisicao.params
+  conteudo.doc(codigo).get()
+    .then(function(documento) {
+      if (documento.exists)
+        resposta.status(200).json({ id: documento.id, ...documento.data() })
+      else resposta.status(404).json({
+        mensagem: "Nenhum resultado encontrado!"
+      })
+    })
+    .catch(function(erro) {
+      resposta.status(500).json({ mensagem: erro.message })
+    })
 })
+
+
+
+
+
 
 rotas.get("/generos", function(requisicao, resposta) {
   conteudo.get()
@@ -61,6 +87,7 @@ rotas.get("/generos", function(requisicao, resposta) {
     })
 })
 
+
 rotas.post("/conteudo", async function(requisicao, resposta) {
   const corpo = requisicao.body
   try {
@@ -78,5 +105,42 @@ rotas.post("/conteudo", async function(requisicao, resposta) {
 })
 
 
+rotas.post("/entrar", async function(requisicao, resposta) {
+  const corpo = requisicao.body
+  const esquema = Joi.object({
+    email: Joi.string().email().max(128).required(),
+    senha: Joi.string().min(8).max(32).required()
+
+
+  })
+
+
+  try {
+    const validado = await esquema.validateAsync(corpo)
+    usuarios
+    .where("email", "==", validado.email)
+    .where("senha", "==", crypto.SHA256(validado.senha).toString())
+    .get()
+    .then(function(resultado) {
+      if (!resultado.empty)
+        resposta.sendStatus(202)
+      else
+        resposta.sendStatus(401)
+    })
+    .catch(function(erro) {
+      resposta.status(500).json({ mensagem: erro.message })
+    })
+  } catch (erro) {
+    resposta.status(400).json({ mensagem: erro.message })
+  }
+})
+
+
+
 
 export default rotas
+
+
+
+
+
