@@ -1,12 +1,16 @@
 import notifier from "node-notifier"
-import { initializeApp } from "firebase-admin/app"
+import { initializeApp, cert } from "firebase-admin/app"
 import { getFirestore } from "firebase-admin/firestore"
-import "dotenv/config"
+import { readFileSync } from "fs"
 
 let bancoDeDados
 
-try { 
-    initializeApp()
+try {
+    const credenciais = JSON.parse(
+        readFileSync(new URL("./credenciais.json", import.meta.url), "utf-8")
+    )
+
+    initializeApp({ credential: cert(credenciais) })
     bancoDeDados = getFirestore()
 
     notifier.notify({
@@ -15,7 +19,7 @@ try {
         icon: "/"
     })
 } catch (erro) {
-    console.log(erro.message)
-}   
+    console.log("Erro na conexão:", erro.message)
+}
 
 export { bancoDeDados }

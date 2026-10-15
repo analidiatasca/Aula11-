@@ -128,6 +128,7 @@ rotas.post("/entrar", async function(requisicao, resposta) {
         resposta.sendStatus(401)
     })
     .catch(function(erro) {
+      console.log("ERRO FIRESTORE:", erro.message)
       resposta.status(500).json({ mensagem: erro.message })
     })
   } catch (erro) {
@@ -135,6 +136,30 @@ rotas.post("/entrar", async function(requisicao, resposta) {
   }
 })
 
+rotas.post("/usuarios", async function(requisicao, resposta) {
+  const corpo = requisicao.body
+const esquema = Joi.object({
+    email: Joi.string().email().max(128).required(),
+    senha: Joi.string().required() })
+try {
+  const validado = await esquema.validateAsync(corpo)
+  usuarios.add({
+  email: validado.email,
+  senha: crypto.SHA256(validado.senha).toString()
+  })
+  .then(function(referencia) {
+    resposta.status(201).json({ id: referencia.id })
+  })
+  .catch(function(erro) {
+    resposta.status(500).json({ mensagem: erro.message })
+  })
+
+}
+catch(erro) {
+  resposta.status(400).json({ mensagem: erro.message })
+}
+
+})
 
 
 
